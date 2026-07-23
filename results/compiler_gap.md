@@ -78,7 +78,7 @@ superopt finds a different 3-op program, and it's constant-free. The wiring is
 `ashr(x, x)`, then `x xor r0`, then `r1 sub r0`. The first instruction is the
 interesting one. Shifting `x` arithmetically by `x` itself builds the sign mask.
 Split it by the value of `x`. For `x` from 0 to 31 the shift amount is in range,
-and since `x < 2^x` every set bit shifts off the top, so the result is 0. For `x`
+and since `x < 2^x` every set bit shifts off the low end, so the result is 0. For `x`
 of 32 and up the shift is over-width, and the IR's ASHR saturates a non-negative
 value to 0, so those land at 0 too. A negative `x` saturates the other way: its
 shift amount read as unsigned is at least 2^31, well past the width, so the
