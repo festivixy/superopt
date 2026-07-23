@@ -2,6 +2,26 @@
 
 Why each non-obvious choice was made. Newest entry first.
 
+## Phase 5A: the latency cost model
+
+- **"Optimal" gains a second definition, and both are reported.** Minimum
+  instruction count stays the headline (CLAUDE.md section 7); minimum
+  summed latency is the alternate, with per-op weights from Agner Fog's
+  instruction tables (agner.org/optimize) for Intel Alder Lake: mul 3,
+  everything else 1. The report compares both on the same benchmarks, as
+  section 7 requires.
+- **Cost-optimality is proven by sweeping libraries in weight order.** A
+  program's cost equals its op multiset's total weight, and an optimal
+  program has no dead code, so CEGIS over multisets in nondecreasing
+  weight order makes the first synthesized program cost-optimal at 32-bit
+  with constants free. Zero-instruction programs cost 0 and are excluded
+  by the identity and non-constancy checks, like the Phase 5B floors.
+- **x*9 is the flip.** Length picks mul-by-9 (1 instruction, cost 3);
+  latency picks shift-3-add (2 instructions, cost 2). The solver finds
+  the 9 and the 3 itself. The old benchmarks don't flip: their optimal
+  programs are MUL-free, so the existing floors already carry the cost
+  claims.
+
 ## Phase 5B: the compiler gap study
 
 - **Both sides start from the same naive spec.** superopt reads the Python

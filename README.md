@@ -66,8 +66,12 @@ Phases 1 through 4 and the independent fuzzer are done and verified:
 - the compiler gap study (Phase 5B): the same naive specs compiled with
   `gcc -O3` and `clang -O3` versus superopt's proven minimums, measured by
   a scripted counting rule. See [results/compiler_gap.md](results/compiler_gap.md).
+- the latency cost model (Phase 5A): a second definition of optimal, minimum
+  summed latency instead of instruction count, where `x * 9` flips from a
+  single multiply to a two-op shift-and-add. See
+  [results/cost_model.md](results/cost_model.md).
 
-The suite runs 77 tests green by default, and every synthesized program clears
+The suite runs 84 tests green by default, and every synthesized program clears
 both layers, the SMT proof and the independent fuzzer.
 
 One result is worth stating plainly. Full SWAR population count is the measured
@@ -87,7 +91,7 @@ at 3, all branchless. popcount is the honest row, the compilers land at 11 to 79
 superopt has no converged result, since full SWAR popcount is the synthesizer's
 frontier. The numbers, the method, and the assembly reading are in
 [results/compiler_gap.md](results/compiler_gap.md). The remaining Phase 5 stretch
-goals are a latency cost model and neural-guided search.
+goal is neural-guided search.
 
 Deliberately out of scope for now: floating point, memory and loads/stores,
 loops and branches, and multi-output programs. Each one is its own research
@@ -103,7 +107,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-`pytest` should report 77 passed, with 2 popcount rungs deselected as `slow`.
+`pytest` should report 84 passed, with 2 popcount rungs deselected as `slow`.
 
 ## Notes
 

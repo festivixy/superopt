@@ -52,6 +52,10 @@ Neither book covers synthesis. They give you the verifier; the component-based e
 
 *Hacker's Delight*, 2nd edition (Henry S. Warren Jr.; Addison-Wesley, 2012; ISBN 978-0321842688) is the source of the bit tricks the tool should rediscover on its own: `x & -x`, popcount, magic-number division, de Bruijn sequences. It's a book, so there's no DOI. The book is the reference.
 
+## For the latency cost model (Phase 5, Option A)
+
+*Instruction Tables* (Agner Fog; Technical University of Denmark, updated 2025) measures per-instruction latency and throughput for every x86 microarchitecture. It's where the cost model's weights come from: on Intel Alder Lake a 32-bit multiply has latency 3 and the ALU and shift operations have latency 1. There's no DOI, since it's self-published and revised continuously, so the canonical link is the PDF itself. https://www.agner.org/optimize/instruction_tables.pdf
+
 ## If the neural-guided stretch goal happens (Phase 5, Option C)
 
 *Learning to Superoptimize Programs* (Bunel, Desmaison, Kumar, Torr, Kohli; ICLR 2017) is the paper to cite if you try learning which candidates to enumerate first. Frame it as applying a known technique, not inventing one. Free PDF: https://arxiv.org/abs/1611.01787
