@@ -18,6 +18,7 @@ def test_every_op_has_a_weight():
     assert set(WEIGHTS) == set(Op)
     assert all(weight >= 1 for weight in WEIGHTS.values())
     assert WEIGHTS[Op.MUL] == 3
+    assert all(WEIGHTS[op] == 1 for op in Op if op is not Op.MUL)
 
 
 def test_program_cost_sums_weights_and_consts_are_free():
