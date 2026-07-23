@@ -91,6 +91,9 @@ def test_cost_optimal_times_nine_is_shift_add():
 
 def test_the_two_definitions_disagree_on_times_nine():
     spec = _times_nine_spec(32)
+    assert execute(spec, (1,)) != execute(spec, (2,))
+    identity = Program(32, (), InputRef(0))
+    assert isinstance(equivalent(identity, spec), Counterexample)
     by_length = synthesize(spec, Library(ops=(Op.MUL,), n_constants=1), seed=0)
     by_cost = synthesize_min_cost(spec, max_cost=3, seed=0)
     assert by_length is not None
