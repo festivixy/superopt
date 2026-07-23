@@ -31,16 +31,18 @@ gives the minimum cost, because every lighter multiset was already tried and
 came back unsat. It's iterative deepening on weight instead of length, and it
 runs at 32 bits with the constants left free for the solver to pick.
 
-Zero-instruction programs cost 0, so they'd win outright if they weren't ruled
-out first. Two checks exclude them, the same pair the Phase 5B floors use. The
-identity check asks whether the bare input already equals the spec and expects a
-counterexample; the non-constancy check runs the spec on two inputs and confirms
-the outputs differ, which kills any constant pass-through. Both guard the sweep
-in `synthesize_min_cost`, and the three tests
+Zero-instruction programs cost 0, so they'd win outright if the sweep ever
+considered them. It doesn't: `_libraries_by_cost` starts at one component, so
+`synthesize_min_cost` structurally excludes the empty program before the search
+begins. That's only safe if the spec truly needs an instruction, and confirming
+that is the tests' job, not the sweep's. The identity check asks whether the
+bare input already equals the spec and expects a counterexample; the
+non-constancy check runs the spec on two inputs and confirms the outputs
+differ, which kills any constant pass-through. All three flip tests,
 `test_length_optimal_times_nine_is_the_multiply`,
 `test_cost_optimal_times_nine_is_shift_add`, and
-`test_the_two_definitions_disagree_on_times_nine` run them before every claim
-below.
+`test_the_two_definitions_disagree_on_times_nine`, run both checks before
+making any claim below.
 
 ## The flip: x*9
 
@@ -61,9 +63,11 @@ minimum latency picks the shift-and-add.
 
 Only multiply has a weight above 1, so for any MUL-free program the cost equals
 the length exactly. That makes the Phase 5B floors do double duty. A program of
-cost below `c` has fewer than `c` instructions, since each instruction weighs at
-least 1, so a length floor at `c` is also a cost floor at `c` whenever the
-optimal program uses no multiply.
+cost below `c` has fewer than `c` instructions, since every op weighs at least
+1, and that holds no matter what ops are used, so a length floor at `c` is
+always a cost floor at `c` too. What needs the multiply-free condition is the
+other side: it's what makes the known program's own cost equal its length, so
+that program meets the floor exactly instead of just sitting above it.
 
 isolate_rmb's optimum is `neg` then `and`, two weight-1 instructions, cost 2.
 `test_no_isolate_rmb_program_of_length_one_or_less` sweeps every one-op library
