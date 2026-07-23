@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from superopt.benchmarks.abs_val import absval
 from superopt.benchmarks.isolate_rmb import isolate_rmb
 from superopt.benchmarks.popcount import popcount
 from superopt.cegis import Library, _Assignment, _decode, synthesize
@@ -126,6 +127,48 @@ def test_synthesizes_shift_then_mask():
         return (x >> 1) & 0x55
 
     assert fuzz(result, shifted_mask, trials=20_000, seed=1) is None
+
+
+def _absval_spec(width: int) -> Program:
+    return Program(
+        width,
+        (
+            Instruction(Op.ASHR, (InputRef(0), Const(width - 1))),
+            Instruction(Op.NOT, (ResultRef(0),)),
+            Instruction(Op.AND, (InputRef(0), ResultRef(1))),
+            Instruction(Op.NEG, (InputRef(0),)),
+            Instruction(Op.AND, (ResultRef(3), ResultRef(0))),
+            Instruction(Op.OR, (ResultRef(2), ResultRef(4))),
+        ),
+        ResultRef(5),
+    )
+
+
+def test_absval_spec_matches_benchmark():
+    spec = _absval_spec(8)
+    for x in range(256):
+        assert execute(spec, (x,)) == absval(x, 8)
+    assert fuzz(_absval_spec(32), absval, trials=20_000, seed=1) is None
+
+
+def test_synthesizes_branchless_absval_at_8_bit():
+    spec = _absval_spec(8)
+    library = Library(ops=(Op.ASHR, Op.XOR, Op.SUB), n_constants=1)
+    result = synthesize(spec, library, seed=0)
+    assert result is not None
+    assert len(result.instructions) == 3
+    assert isinstance(equivalent(result, spec), Equivalent)
+    assert fuzz(result, absval, trials=20_000, seed=1) is None
+
+
+def test_synthesizes_branchless_absval_at_32_bit():
+    spec = _absval_spec(32)
+    library = Library(ops=(Op.ASHR, Op.XOR, Op.SUB), n_constants=1)
+    result = synthesize(spec, library, seed=0)
+    assert result is not None
+    assert len(result.instructions) == 3
+    assert isinstance(equivalent(result, spec), Equivalent)
+    assert fuzz(result, absval, trials=20_000, seed=1) is None
 
 
 def _popcount_spec(width: int) -> Program:
