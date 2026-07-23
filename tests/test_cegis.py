@@ -184,12 +184,22 @@ def _libraries_up_to_two_ops() -> list[Library]:
 
 def test_no_absval_program_of_length_two_or_less():
     spec = _absval_spec(32)
+    assert execute(spec, (0,)) != execute(spec, (1,))
     identity = Program(32, (), InputRef(0))
     assert isinstance(equivalent(identity, spec), Counterexample)
     libraries = _libraries_up_to_two_ops()
     assert len(libraries) == 77
     for library in libraries:
         assert synthesize(spec, library, seed=0) is None, library.ops
+
+
+def test_no_isolate_rmb_program_of_length_one_or_less():
+    spec = _isolate_rmb_spec(32)
+    assert execute(spec, (1,)) != execute(spec, (2,))
+    identity = Program(32, (), InputRef(0))
+    assert isinstance(equivalent(identity, spec), Counterexample)
+    for op in Op:
+        assert synthesize(spec, Library(ops=(op,), n_constants=2), seed=0) is None, op
 
 
 def _popcount_spec(width: int) -> Program:
