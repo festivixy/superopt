@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from itertools import combinations_with_replacement
+
 import pytest
 
 from superopt.benchmarks.abs_val import absval
 from superopt.benchmarks.isolate_rmb import isolate_rmb
 from superopt.benchmarks.popcount import popcount
 from superopt.cegis import Library, _Assignment, _decode, synthesize
-from superopt.equiv import Equivalent, equivalent
+from superopt.equiv import Counterexample, Equivalent, equivalent
 from superopt.fuzz import fuzz
 from superopt.interp import execute
 from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef
@@ -169,6 +171,25 @@ def test_synthesizes_branchless_absval_at_32_bit():
     assert len(result.instructions) == 3
     assert isinstance(equivalent(result, spec), Equivalent)
     assert fuzz(result, absval, trials=20_000, seed=1) is None
+
+
+def _libraries_up_to_two_ops() -> list[Library]:
+    singles = [Library(ops=(op,), n_constants=2) for op in Op]
+    pairs = [
+        Library(ops=pair, n_constants=4)
+        for pair in combinations_with_replacement(tuple(Op), 2)
+    ]
+    return singles + pairs
+
+
+def test_no_absval_program_of_length_two_or_less():
+    spec = _absval_spec(32)
+    identity = Program(32, (), InputRef(0))
+    assert isinstance(equivalent(identity, spec), Counterexample)
+    libraries = _libraries_up_to_two_ops()
+    assert len(libraries) == 77
+    for library in libraries:
+        assert synthesize(spec, library, seed=0) is None, library.ops
 
 
 def _popcount_spec(width: int) -> Program:
