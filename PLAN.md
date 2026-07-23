@@ -227,7 +227,7 @@ technique with a measured speedup, not as something new.
 
 To do:
 
-- [ ] Option B, the one I'd prioritize: C versions, `-O3` instruction counts, and a `results/compiler_gap.md` of concrete wins
+- [x] Option B, the one I'd prioritize: C versions, `-O3` instruction counts, and a `results/compiler_gap.md` of concrete wins. Done: superopt proves 2 for isolate_rmb against gcc's 14 and clang's 97, absval ties at 3, popcount is the frontier; see `results/compiler_gap.md`.
 - [ ] Option A: `cost.py` latency weights and a benchmark where length and latency disagree
 - [ ] Option C: a small model to order candidates, measured against uniform enumeration, framed as applying prior work
 

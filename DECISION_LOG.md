@@ -2,6 +2,37 @@
 
 Why each non-obvious choice was made. Newest entry first.
 
+## Phase 5B: the compiler gap study
+
+- **Both sides start from the same naive spec.** superopt reads the Python
+  spec; gcc and clang get a line-for-line naive C translation. Comparing my
+  optimal output against a compiler that was handed the trick would be
+  meaningless; the question is who recovers the trick from the naive form.
+- **The counting rule is "every body instruction except ret," by script.**
+  Prologue-free leaf functions make the body unambiguous, and putting the
+  rule in `scripts/compiler_gap.py` with a parser test keeps it from being
+  applied by eye, differently per benchmark.
+- **Baseline x86-64 is the headline; -march=x86-64-v3 is the honesty
+  column.** With BMI1 and POPCNT the ISA absorbs whole tricks (`blsi`,
+  `popcnt`), which is a hardware story, not a code-generation one. Both
+  columns appear so neither story hides the other.
+- **The absval lower bound comes from exhausting component libraries, not
+  the Phase 3 enumerator.** The enumerator is constant-free and 8-bit; the
+  claim is at 32-bit with constants. Since the Jha encoding wires every
+  library component, sweeping all 11 one-op and 66 two-op multisets with
+  free constants and getting unsat everywhere proves no program of length
+  one or two computes absval at width 32.
+- **The 32-bit absval synthesis returned a constant-free wiring, so the
+  "solver finds 31" assertion was dropped.** I expected the solver to pick
+  the shift amount 31 for `ashr(x, 31)`. It found something better: a 3-op
+  program with no constants at all, `ashr(x, x)` then `x xor r0` then
+  `r1 sub r0`. Shifting `x` by `x` builds the sign mask because a
+  non-negative `x` shifts to 0 and a negative `x`, read as an unsigned shift
+  amount at least 2^31, saturates the arithmetic shift to all-ones, matching
+  the over-width shift semantics logged in Phase 1. That's IR/Z3 behavior,
+  not x86's, since `sar` masks the shift amount mod 32, so the test asserts
+  length, equivalence, and a fuzz pass instead of a specific constant.
+
 ## Phase 4b: component synthesis
 
 - **The wiring is encoded with Jha 2010 location variables.** Each operation gets an integer output line and one input line per operand. Well-formedness keeps the output lines a permutation (one component per line) and forces every input to read a strictly-earlier line (acyclicity), and a connection constraint ties each input to the value on the line it points at. The solver picks the wiring and the constants together, and a decoder reads the model back into a `Program`. The technique is Jha et al. 2010, not novel here; the implementation and evaluation are.

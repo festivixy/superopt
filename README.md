@@ -62,9 +62,12 @@ Phases 1 through 4 and the independent fuzzer are done and verified:
 - component synthesis (Phase 4b): the Jha 2010 location-variable encoding, where
   the solver wires a fixed bag of operations into a program. It rediscovers
   `x & -x`, recovers a mask constant and even a shift amount on its own, and
-  verifies the result over all inputs.
+  verifies the result over all inputs,
+- the compiler gap study (Phase 5B): the same naive specs compiled with
+  `gcc -O3` and `clang -O3` versus superopt's proven minimums, measured by
+  a scripted counting rule. See [results/compiler_gap.md](results/compiler_gap.md).
 
-The suite runs 68 tests green by default, and every synthesized program clears
+The suite runs 75 tests green by default, and every synthesized program clears
 both layers, the SMT proof and the independent fuzzer.
 
 One result is worth stating plainly. Full SWAR population count is the measured
@@ -76,8 +79,15 @@ a cliff. The two popcount rungs stay in the suite marked `slow`, deselected by
 default and runnable with `pytest -m slow`, documenting both the target and the wall.
 The seven rungs that pass prove the technique end to end.
 
-Phase 5 is next, the stretch goals. The most defensible is measuring concrete wins
-against `-O3`, with a latency cost model or neural-guided search as alternates.
+Phase 5B is done: the compiler gap study measures the same naive specs against
+`gcc -O3` and `clang -O3` and lines them up with superopt's proven minimums. On
+isolate-rightmost-bit superopt proves 2 instructions where gcc keeps a 14-instruction
+loop and clang unrolls to 97, neither recovering `x & -x`. absval is a three-way tie
+at 3, all branchless. popcount is the honest row, the compilers land at 11 to 79 and
+superopt has no converged result, since full SWAR popcount is the synthesizer's
+frontier. The numbers, the method, and the assembly reading are in
+[results/compiler_gap.md](results/compiler_gap.md). The remaining Phase 5 stretch
+goals are a latency cost model and neural-guided search.
 
 Deliberately out of scope for now: floating point, memory and loads/stores,
 loops and branches, and multi-output programs. Each one is its own research
@@ -93,7 +103,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-`pytest` should report 68 passed, with 2 popcount rungs deselected as `slow`.
+`pytest` should report 75 passed, with 2 popcount rungs deselected as `slow`.
 
 ## Notes
 
