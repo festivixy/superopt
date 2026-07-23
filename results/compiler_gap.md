@@ -123,6 +123,6 @@ deselected by default, documenting the wall rather than hiding it.
 One local compiler, gcc MinGW 13.2.0, with clang supplied as checked-in Compiler
 Explorer snapshots. No MSVC. Three benchmarks, not a suite. And the whole table
 counts instructions, which isn't latency: a 3-instruction sequence with a slow
-multiply can lose to a longer one built from cheap shifts. A latency cost model
-is the Phase 5A follow-up, and if I build it the table gets a second reading and
-the comparison runs both ways.
+multiply can lose to a longer one built from cheap shifts. That second reading
+exists now, in `results/cost_model.md`: the compiler columns above still count
+instructions, and it's the cost doc that runs the comparison the other way.

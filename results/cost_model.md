@@ -22,7 +22,11 @@ none of which a single straight-line routine exposes.
 ## How cost-optimality is proven
 
 A program's cost is the sum of its instruction weights, which is the total weight
-of its opcode multiset. An optimal program has no dead code, since dropping an
+of its opcode multiset. That identity leans on a premise from the encoder: the
+Jha component-connection encoding wires every library component into the
+program exactly once, the location variables are distinct and exactly fill the
+component slots, so a synthesized program's cost always equals its library's
+total weight. An optimal program has no dead code, since dropping an
 unused instruction leaves a cheaper program computing the same thing. So the
 cheapest program is realized by some multiset of components, and `synthesize_min_cost`
 sweeps those multisets in nondecreasing weight order, calling the Phase 4b
@@ -58,6 +62,15 @@ Both programs are verified twice over. The SMT proof shows each equals the spec
 on every 32-bit input, and the independent fuzzer agrees on 20,000 random cases.
 The flip is real and it's plain: minimum instruction count picks the multiply,
 minimum latency picks the shift-and-add.
+
+Here's the same comparison across every benchmark in the suite:
+
+| benchmark | length-optimal | latency-optimal | flip? |
+|---|---|---|---|
+| isolate_rmb | 2 instructions, cost 2 | same program | no |
+| absval | 3 instructions, cost 3 | same program | no |
+| popcount | no result (frontier) | no cost claim | — |
+| x*9 | 1 instruction (mul), cost 3 | 2 instructions (shl, add), cost 2 | yes |
 
 ## The old benchmarks don't flip
 
