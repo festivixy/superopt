@@ -58,9 +58,14 @@ and v3 both land at 14, but they aren't the same 14. The baseline shifts with
 instructions, it just spends them inside the same loop instead of collapsing it
 to `blsi`. clang goes the other way and fully unrolls, 97 instructions, a
 `mov`/`test`/`jne` block per bit position. superopt returns 2, `neg` then
-`and`, which is `x & -x`, proven optimal at length 2 by
-`test_isolate_rmb_rediscovers_two_instruction_trick` with the length-1 floor
-from `test_no_single_instruction_program_matches_isolate_rmb`.
+`and`, which is `x & -x`. The length-2 optimum is the original Phase 3 milestone,
+`test_isolate_rmb_rediscovers_two_instruction_trick` with the length-1 floor from
+`test_no_single_instruction_program_matches_isolate_rmb`, both 8-bit and
+constant-free. `test_no_isolate_rmb_program_of_length_one_or_less` now carries the
+floor at 32-bit with free constants, sweeping every single-op component library
+and getting unsat, the same component-exhaustion argument the absval row uses.
+That component-library floor is stronger than the Phase 3 enumeration because it
+covers constants and runs at the full width.
 
 ### absval
 
@@ -72,19 +77,24 @@ and v3 for both. They don't use the sar/xor/sub form at all.
 superopt finds a different 3-op program, and it's constant-free. The wiring is
 `ashr(x, x)`, then `x xor r0`, then `r1 sub r0`. The first instruction is the
 interesting one. Shifting `x` arithmetically by `x` itself builds the sign mask.
-For any non-negative `x` the shift amount is smaller than the width, so the
-result is 0. For any negative `x` the shift amount read as unsigned is at least
-2^31, past the width, so the arithmetic shift saturates to all-ones. That gives
-0 for non-negative inputs and -1 for negative ones, which is exactly the mask the
-classic `(x ^ mask) - mask` absolute-value trick wants, without ever naming the
-constant 31.
+Split it by the value of `x`. For `x` from 0 to 31 the shift amount is in range,
+and since `x < 2^x` every set bit shifts off the top, so the result is 0. For `x`
+of 32 and up the shift is over-width, and the IR's ASHR saturates a non-negative
+value to 0, so those land at 0 too. A negative `x` saturates the other way: its
+shift amount read as unsigned is at least 2^31, well past the width, so the
+arithmetic shift fills with all-ones. That gives 0 for non-negative inputs and -1
+for negative ones, which is exactly the mask the classic `(x ^ mask) - mask`
+absolute-value trick wants, without ever naming the constant 31.
 
 One caveat, and it matters. That saturating over-width shift is the IR's
-semantics, matching Z3's `bvashr`. x86's `sar` masks the shift amount mod 32, so
-`sar %eax, %eax` on a negative value would shift by `x & 31`, not saturate, and
-the mask would come out wrong. So this exact constant-free variant isn't directly
-portable to x86. The optimality claim is scoped to the project's instruction set,
-which is what the CLAUDE.md definition of optimal says. `test_synthesizes_branchless_absval_at_32_bit`
+semantics, matching Z3's `bvashr`. x86's `sar` masks the shift amount mod 32
+instead, so the variant breaks on x86 at both ends. A negative `x` would shift by
+`x & 31` rather than saturate, and the mask comes out wrong. A non-negative `x` of
+32 and up breaks too: `x = 32` masks to a shift of 0, so `sar` returns 32 where
+the IR gives 0. The variant is correct in the project's IR and proven there; it
+just isn't x86-portable. The optimality claim is scoped to the project's
+instruction set either way, which is what the CLAUDE.md definition of optimal says.
+`test_synthesizes_branchless_absval_at_32_bit`
 verifies the 3-op program over all 32-bit inputs, and
 `test_no_absval_program_of_length_two_or_less` sweeps every one-op and two-op
 component library and gets unsat everywhere, so 3 is the proven floor.

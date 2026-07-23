@@ -21,7 +21,9 @@ Why each non-obvious choice was made. Newest entry first.
   claim is at 32-bit with constants. Since the Jha encoding wires every
   library component, sweeping all 11 one-op and 66 two-op multisets with
   free constants and getting unsat everywhere proves no program of length
-  one or two computes absval at width 32.
+  one or two computes absval at width 32. The same argument now backs the
+  isolate_rmb row at 32-bit, where sweeping every single-op library with free
+  constants proves no one-instruction program isolates the rightmost bit.
 - **The 32-bit absval synthesis returned a constant-free wiring, so the
   "solver finds 31" assertion was dropped.** I expected the solver to pick
   the shift amount 31 for `ashr(x, 31)`. It found something better: a 3-op

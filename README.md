@@ -67,7 +67,7 @@ Phases 1 through 4 and the independent fuzzer are done and verified:
   `gcc -O3` and `clang -O3` versus superopt's proven minimums, measured by
   a scripted counting rule. See [results/compiler_gap.md](results/compiler_gap.md).
 
-The suite runs 75 tests green by default, and every synthesized program clears
+The suite runs 77 tests green by default, and every synthesized program clears
 both layers, the SMT proof and the independent fuzzer.
 
 One result is worth stating plainly. Full SWAR population count is the measured
@@ -103,7 +103,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-`pytest` should report 75 passed, with 2 popcount rungs deselected as `slow`.
+`pytest` should report 77 passed, with 2 popcount rungs deselected as `slow`.
 
 ## Notes
 
