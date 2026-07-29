@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import pytest
 
+from superopt.benchmarks.avg_ceil import avg_ceil
+from superopt.benchmarks.avg_floor import avg_floor
 from superopt.benchmarks.clear_lowest_bit import clear_lowest_bit
 from superopt.benchmarks.isolate_lowest_zero import isolate_lowest_zero
 from superopt.benchmarks.rotl5 import rotl5
+from superopt.benchmarks.sign import sign
 from superopt.benchmarks.smear_lowest_bit import smear_lowest_bit
 from superopt.benchmarks.turn_off_trailing_ones import turn_off_trailing_ones
 from superopt.cegis import Library, synthesize
@@ -181,3 +184,116 @@ def test_rotl5_synthesizes():
 @pytest.mark.slow
 def test_rotl5_proven_at_3():
     assert_floor(_rotl5_spec(32), 2, 1, ((1,), (2,)))
+
+
+def _sign_spec(width: int) -> Program:
+    return Program(
+        width,
+        (
+            Instruction(Op.ASHR, (InputRef(0), Const(width - 1))),
+            Instruction(Op.NEG, (InputRef(0),)),
+            Instruction(Op.LSHR, (ResultRef(1), Const(width - 1))),
+            Instruction(Op.OR, (ResultRef(0), ResultRef(2))),
+        ),
+        ResultRef(3),
+    )
+
+
+def test_sign_spec_matches_benchmark():
+    spec = _sign_spec(8)
+    for x in range(256):
+        assert execute(spec, (x,)) == sign(x, 8)
+    spec32 = _sign_spec(32)
+    assert fuzz(spec32, sign, trials=20_000, seed=1) is None
+
+
+def test_sign_synthesizes():
+    spec = _sign_spec(32)
+    result = synthesize(
+        spec, Library(ops=(Op.ASHR, Op.NEG, Op.LSHR, Op.OR), n_constants=2), seed=0
+    )
+    assert result is not None
+    assert len(result.instructions) == 4
+    assert isinstance(equivalent(result, spec), Equivalent)
+    assert fuzz(result, sign, trials=20_000, seed=1) is None
+
+
+@pytest.mark.slow
+def test_sign_proven_at_4():
+    assert_floor(_sign_spec(32), 3, 1, ((0,), (1,)))
+
+
+def _avg_floor_spec(width: int) -> Program:
+    return Program(
+        width,
+        (
+            Instruction(Op.AND, (InputRef(0), InputRef(1))),
+            Instruction(Op.XOR, (InputRef(0), InputRef(1))),
+            Instruction(Op.LSHR, (ResultRef(1), Const(1))),
+            Instruction(Op.ADD, (ResultRef(0), ResultRef(2))),
+        ),
+        ResultRef(3),
+    )
+
+
+def test_avg_floor_spec_matches_benchmark():
+    spec = _avg_floor_spec(8)
+    for x in range(256):
+        for y in range(256):
+            assert execute(spec, (x, y)) == avg_floor(x, y, 8)
+    spec32 = _avg_floor_spec(32)
+    assert fuzz(spec32, avg_floor, trials=20_000, seed=1) is None
+
+
+def test_avg_floor_synthesizes():
+    spec = _avg_floor_spec(32)
+    result = synthesize(
+        spec, Library(ops=(Op.AND, Op.XOR, Op.LSHR, Op.ADD), n_constants=1), seed=0
+    )
+    assert result is not None
+    assert len(result.instructions) == 4
+    assert isinstance(equivalent(result, spec), Equivalent)
+    assert fuzz(result, avg_floor, trials=20_000, seed=1) is None
+
+
+@pytest.mark.slow
+def test_avg_floor_proven_at_4():
+    assert_floor(_avg_floor_spec(32), 3, 2, ((0, 0), (2, 0)))
+
+
+def _avg_ceil_spec(width: int) -> Program:
+    return Program(
+        width,
+        (
+            Instruction(Op.OR, (InputRef(0), InputRef(1))),
+            Instruction(Op.XOR, (InputRef(0), InputRef(1))),
+            Instruction(Op.LSHR, (ResultRef(1), Const(1))),
+            Instruction(Op.SUB, (ResultRef(0), ResultRef(2))),
+        ),
+        ResultRef(3),
+    )
+
+
+def test_avg_ceil_spec_matches_benchmark():
+    spec = _avg_ceil_spec(8)
+    for x in range(256):
+        for y in range(256):
+            assert execute(spec, (x, y)) == avg_ceil(x, y, 8)
+    spec32 = _avg_ceil_spec(32)
+    assert fuzz(spec32, avg_ceil, trials=20_000, seed=1) is None
+
+
+def test_avg_ceil_synthesizes():
+    spec = _avg_ceil_spec(32)
+    result = synthesize(
+        spec, Library(ops=(Op.OR, Op.XOR, Op.LSHR, Op.SUB), n_constants=1), seed=0
+    )
+    assert result is not None
+    assert len(result.instructions) == 4
+    assert isinstance(equivalent(result, spec), Equivalent)
+    assert fuzz(result, avg_ceil, trials=20_000, seed=1) is None
+
+
+@pytest.mark.slow
+def test_avg_ceil_proven_at_4():
+    assert_floor(_avg_ceil_spec(32), 3, 2, ((0, 0), (2, 0)))
