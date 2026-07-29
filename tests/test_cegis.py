@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from itertools import combinations_with_replacement
-
 import pytest
 
 from superopt.benchmarks.abs_val import absval
 from superopt.benchmarks.isolate_rmb import isolate_rmb
 from superopt.benchmarks.popcount import popcount
 from superopt.cegis import Library, _Assignment, _decode, synthesize
-from superopt.equiv import Counterexample, Equivalent, equivalent
+from superopt.equiv import Equivalent, equivalent
 from superopt.fuzz import fuzz
 from superopt.interp import execute
 from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef
+from tests.support import assert_floor
 
 
 def _isolate_rmb_spec(width: int) -> Program:
@@ -173,33 +172,12 @@ def test_synthesizes_branchless_absval_at_32_bit():
     assert fuzz(result, absval, trials=20_000, seed=1) is None
 
 
-def _libraries_up_to_two_ops() -> list[Library]:
-    singles = [Library(ops=(op,), n_constants=2) for op in Op]
-    pairs = [
-        Library(ops=pair, n_constants=4)
-        for pair in combinations_with_replacement(tuple(Op), 2)
-    ]
-    return singles + pairs
-
-
 def test_no_absval_program_of_length_two_or_less():
-    spec = _absval_spec(32)
-    assert execute(spec, (0,)) != execute(spec, (1,))
-    identity = Program(32, (), InputRef(0))
-    assert isinstance(equivalent(identity, spec), Counterexample)
-    libraries = _libraries_up_to_two_ops()
-    assert len(libraries) == 77
-    for library in libraries:
-        assert synthesize(spec, library, seed=0) is None, library.ops
+    assert_floor(_absval_spec(32), 2, 1, ((0,), (1,)))
 
 
 def test_no_isolate_rmb_program_of_length_one_or_less():
-    spec = _isolate_rmb_spec(32)
-    assert execute(spec, (1,)) != execute(spec, (2,))
-    identity = Program(32, (), InputRef(0))
-    assert isinstance(equivalent(identity, spec), Counterexample)
-    for op in Op:
-        assert synthesize(spec, Library(ops=(op,), n_constants=2), seed=0) is None, op
+    assert_floor(_isolate_rmb_spec(32), 1, 1, ((1,), (2,)))
 
 
 def _popcount_spec(width: int) -> Program:
