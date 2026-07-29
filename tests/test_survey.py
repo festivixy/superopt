@@ -347,6 +347,10 @@ def test_bswap32_upper_bound_verified():
         assert execute(spec16, (x,)) == bswap32(x, 16)
     spec32 = _bswap_spec(32)
     assert len(spec32.instructions) == 9
+    assert execute(spec32, (0x01020304,)) == 0x04030201
+    assert execute(spec32, (0xFF000000,)) == 0x000000FF
+    assert execute(spec32, (0x000000FF,)) == 0xFF000000
+    assert execute(spec32, (0x12345678,)) == 0x78563412
     assert fuzz(spec32, bswap32, trials=20_000, seed=1) is None
 
 
