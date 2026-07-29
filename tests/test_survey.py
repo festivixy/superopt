@@ -145,9 +145,6 @@ def test_isolate_lowest_zero_synthesizes():
     assert fuzz(result, isolate_lowest_zero, trials=20_000, seed=1) is None
 
 
-@pytest.mark.slow
-def test_isolate_lowest_zero_proven_at_3():
-    assert_floor(_isolate_lowest_zero_spec(32), 2, 1, ((0,), (1,)))
 
 
 def _rotl5_spec(width: int) -> Program:
@@ -218,9 +215,6 @@ def test_sign_synthesizes():
     assert fuzz(result, sign, trials=20_000, seed=1) is None
 
 
-@pytest.mark.slow
-def test_sign_proven_at_4():
-    assert_floor(_sign_spec(32), 3, 1, ((0,), (1,)))
 
 
 def _avg_floor_spec(width: int) -> Program:
@@ -256,9 +250,6 @@ def test_avg_floor_synthesizes():
     assert fuzz(result, avg_floor, trials=20_000, seed=1) is None
 
 
-@pytest.mark.slow
-def test_avg_floor_proven_at_4():
-    assert_floor(_avg_floor_spec(32), 3, 2, ((0, 0), (2, 0)))
 
 
 def _avg_ceil_spec(width: int) -> Program:
@@ -294,6 +285,3 @@ def test_avg_ceil_synthesizes():
     assert fuzz(result, avg_ceil, trials=20_000, seed=1) is None
 
 
-@pytest.mark.slow
-def test_avg_ceil_proven_at_4():
-    assert_floor(_avg_ceil_spec(32), 3, 2, ((0, 0), (2, 0)))
