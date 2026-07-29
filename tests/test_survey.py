@@ -36,7 +36,7 @@ def test_clear_lowest_bit_spec_matches_benchmark():
 
 def test_clear_lowest_bit_synthesizes():
     spec = _clear_lowest_bit_spec(32)
-    result = synthesize(spec, Library(ops=(Op.SUB, Op.AND), n_constants=2), seed=0)
+    result = synthesize(spec, Library(ops=(Op.SUB, Op.AND), n_constants=1), seed=0)
     assert result is not None
     assert len(result.instructions) == 2
     assert isinstance(equivalent(result, spec), Equivalent)
@@ -68,7 +68,7 @@ def test_smear_lowest_bit_spec_matches_benchmark():
 
 def test_smear_lowest_bit_synthesizes():
     spec = _smear_lowest_bit_spec(32)
-    result = synthesize(spec, Library(ops=(Op.SUB, Op.OR), n_constants=2), seed=0)
+    result = synthesize(spec, Library(ops=(Op.SUB, Op.OR), n_constants=1), seed=0)
     assert result is not None
     assert len(result.instructions) == 2
     assert isinstance(equivalent(result, spec), Equivalent)
@@ -100,7 +100,7 @@ def test_turn_off_trailing_ones_spec_matches_benchmark():
 
 def test_turn_off_trailing_ones_synthesizes():
     spec = _turn_off_trailing_ones_spec(32)
-    result = synthesize(spec, Library(ops=(Op.ADD, Op.AND), n_constants=2), seed=0)
+    result = synthesize(spec, Library(ops=(Op.ADD, Op.AND), n_constants=1), seed=0)
     assert result is not None
     assert len(result.instructions) == 2
     assert isinstance(equivalent(result, spec), Equivalent)
