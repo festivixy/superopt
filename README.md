@@ -70,9 +70,16 @@ Phases 1 through 4 and the independent fuzzer are done and verified:
   summed latency instead of instruction count, where `x * 9` flips from a
   single multiply to a two-op shift-and-add. See
   [results/cost_model.md](results/cost_model.md).
+- the gap survey (Phase 5B, Stage A): the gap study extended from 3 benchmarks
+  to 14, with the superopt column split into proven, best found, verified upper
+  bound, or no result rather than a single assertion in all cases. Seven rows
+  contain a proven floor at 32-bit with free constants. The floor certification
+  frontier, where a 77-library sweep takes 20.7 seconds on one spec and fails
+  to complete even in hours on another, is documented in the same document.
 
-The suite runs 84 tests green by default, and every synthesized program clears
-both layers, the SMT proof and the independent fuzzer.
+The suite runs 109 tests green by default with 3 deselected, and every
+synthesized program clears both layers, the SMT proof and the independent
+fuzzer.
 
 One result is worth stating plainly. Full SWAR population count is the measured
 ceiling of the component synthesizer. Even at 8-bit, with bit-vector locations,
@@ -81,15 +88,22 @@ does not converge: the per-round synthesis cost explodes as counterexamples pile
 running 0.06s, 0.1s, 3.9s, 11s, 27s over the first five examples and then falling off
 a cliff. The two popcount rungs stay in the suite marked `slow`, deselected by
 default and runnable with `pytest -m slow`, documenting both the target and the wall.
-The seven rungs that pass prove the technique end to end.
+The `rotl5` floor sweep bears the same mark for the usual reason that it takes
+20.7 seconds. The seven rungs that pass prove the technique end to end.
 
-Phase 5B is done: the compiler gap study measures the same naive specs against
-`gcc -O3` and `clang -O3` and lines them up with superopt's proven minimums. On
-isolate-rightmost-bit superopt proves 2 instructions where gcc keeps a 14-instruction
-loop and clang unrolls to 97, neither recovering `x & -x`. absval is a three-way tie
-at 3, all branchless. popcount is the honest row, the compilers land at 11 to 79 and
-superopt has no converged result, since full SWAR popcount is the synthesizer's
-frontier. The numbers, the method, and the assembly reading are in
+The gap study is now a fourteen-benchmark survey. The same naive specs go to
+`gcc -O3` and `clang -O3` and to superopt, and the superopt column identifies the
+tier of each number: seven proven minimums, four best found with no floor
+certification, two verified upper bounds, and popcount's blank. The most clear-cut
+result is that a naive bit scan loop outdoes both compilers in the same manner. On
+clear-lowest-bit, smear-lowest-bit, turn-off-trailing-ones and isolate-lowest-zero
+gcc preserves a loop of 14 to 19 instructions, while clang unrolls to 93 to 98;
+superopt proves 2 or 3. isolate-rightmost-bit follows the same pattern with 14 and
+97 against a proven 2. The honesty rows are also present: rotl5 and bswap32 map to
+the compilers because x86 supports a rotate and a byte swap, but the IR does not;
+times_nine maps to a tie by instruction count that the latency model interprets
+differently. absval is a three-way tie at 3. Popcount lacks a superopt answer. The
+numbers, the method, the tier hierarchy, and the assembly reading are in
 [results/compiler_gap.md](results/compiler_gap.md). The remaining Phase 5 stretch
 goal is neural-guided search.
 
@@ -107,7 +121,9 @@ pip install -e ".[dev]"
 pytest
 ```
 
-`pytest` should report 84 passed, with 2 popcount rungs deselected as `slow`.
+`pytest` should report 109 passed, 3 deselected. The three marked `slow` are
+the two popcount rungs and the `rotl5` floor sweep, which takes 20.7 seconds
+on its own; run them with `pytest -m slow`.
 
 ## Notes
 
