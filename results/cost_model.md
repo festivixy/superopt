@@ -1,106 +1,118 @@
 # Two definitions of optimal
 
-Phases 3 and 4 pinned "optimal" to one meaning: the fewest instructions, with
-constants free (CLAUDE.md section 7). That's the headline and it stays the
-headline. This doc adds a second meaning, the lowest summed latency, and points
-the synthesizer at a benchmark where the two disagree. On `x * 9`, counting
-instructions picks a single multiply and counting latency picks a two-op
-shift-and-add. Same spec, same proof machinery, two different winners.
+Phases 3 and 4 have locked down one definition of "optimal": the minimal
+instruction count with the constants still unconstrained (CLAUDE.md, section
+7). It continues to be the principal definition. This document proposes a
+second definition, the minimal latency, and describes a benchmark in which the
+two definitions lead to different results. The multiplication of x by 9 takes
+one instruction counted by instruction count, and two instructions counted by
+latency: two operation shift-and-add.
 
-## The weights
+## Weights
 
-Every opcode carries a latency weight. Multiply weighs 3, everything else weighs
-1. The numbers come from Agner Fog's instruction tables (agner.org/optimize) for
-Intel Alder Lake, where a 32-bit `IMUL` has latency 3 and the ALU and shift
-operations have latency 1. The exact table doesn't matter much for the result:
-the flip survives on any core where multiply costs at least 2, which is every
-mainstream x86 and ARM part I know of. This weighting models the latency of one
-serial dependency chain and nothing else. It ignores throughput, instruction-level
-parallelism, and macro-op fusion, all of which a real scheduler cares about and
-none of which a single straight-line routine exposes.
+Every opcode has an associated latency weight. The weight is 3 for
+multiplication, and the weight is 1 for everything else. Weights are taken from
+Agner Fog's instruction tables (agner.org/optimize) for Intel Alder Lake.
+There, a 32-bit IMUL has latency 3, and ALU and shift operations have latency
+1. The precise numbers in this table do not matter for the main conclusion: the
+main conclusion applies to any architecture in which multiplication has latency
+at least 2 (including the mainstream x86 and ARM cores I checked). Weights
+reflect the latency of a single sequential dependency chain, ignoring the
+effect of throughput, instruction level parallelism, and macro-op fusion, which
+are considered by a real-world scheduler but are not visible in a straight-line
+code routine.
 
-## How cost-optimality is proven
+## Proving cost-optimality
 
-A program's cost is the sum of its instruction weights, which is the total weight
-of its opcode multiset. That identity leans on a premise from the encoder: the
-Jha component-connection encoding wires every library component into the
-program exactly once, the location variables are distinct and exactly fill the
-component slots, so a synthesized program's cost always equals its library's
-total weight. An optimal program has no dead code, since dropping an
-unused instruction leaves a cheaper program computing the same thing. So the
-cheapest program is realized by some multiset of components, and `synthesize_min_cost`
-sweeps those multisets in nondecreasing weight order, calling the Phase 4b
-component synthesizer on each. The first multiset that yields a verified program
-gives the minimum cost, because every lighter multiset was already tried and
-came back unsat. It's iterative deepening on weight instead of length, and it
-runs at 32 bits with the constants left free for the solver to pick.
+Cost of a program is the sum of the opcode weights, the same thing as the
+weight of the opcode multiset in the program. This equality follows from the
+encoder premises: the Jha component-connection encoding connects every library
+component to the program exactly once, and the location variables are unique
+and occupy the corresponding slots. Therefore, the cost of the synthesized
+program is equal to the weight of the library. Any optimal program does not
+contain dead code, and removal of any unused instruction makes the program
+cheaper without changing the functionality. Thus, the cheapest program
+corresponds to some opcode multiset, and synthesize_min_cost enumerates opcode
+multisets in the increasing weight order, using the Phase 4b component
+synthesizer on each of them. The first multiset that gives the synthesized
+verified program is the optimal multiset, as any lighter multiset has already
+been tried and found unsatisfiable. This is an example of iterative deepening
+by weight rather than by length, performed at 32-bit precision with free
+constants.
 
-Zero-instruction programs cost 0, so they'd win outright if the sweep ever
-considered them. It doesn't: `_libraries_by_cost` starts at one component, so
-`synthesize_min_cost` structurally excludes the empty program before the search
-begins. That's only safe if the spec truly needs an instruction, and confirming
-that is the tests' job, not the sweep's. The identity check asks whether the
-bare input already equals the spec and expects a counterexample; the
-non-constancy check runs the spec on two inputs and confirms the outputs
-differ, which kills any constant pass-through. All three flip tests,
-`test_length_optimal_times_nine_is_the_multiply`,
-`test_cost_optimal_times_nine_is_shift_add`, and
-`test_the_two_definitions_disagree_on_times_nine`, run both checks before
-making any claim below.
+Zero-length programs have cost 0, so they would provide a win. They are not
+considered by the sweep, though: `_libraries_by_cost` starts with one-component
+libraries, so synthesize_min_cost explicitly excludes the empty program from
+the search. This exclusion is legitimate if and only if the specification
+requires at least one instruction. Verification of this requirement is the task
+of the tests rather than the sweep itself. The identity check checks whether
+the bare input satisfies the specification, and thus anticipates
+counterexamples; the non-constancy check executes the specification on two
+inputs and makes sure that the outputs are different, thus excluding any
+constant pass-through. All three tests,
+test_length_optimal_times_nine_is_the_multiply,
+test_cost_optimal_times_nine_is_shift_add, and
+test_the_two_definitions_disagree_on_times_nine, perform both checks before
+making any statements below.
 
 ## The flip: x*9
 
-Length-optimal `x * 9` is one instruction: `mul(x, 9)`, cost 3. The solver finds
-the 9 on its own, from a one-component multiply library with a single free
+For length optimality, x * 9 requires one instruction: mul(x, 9), with cost 3.
+The solver finds the constant 9 in a one-component multiply library with a free
 constant.
 
-Cost-optimal `x * 9` is two instructions: `shl(x, 3)` then `add(x, r0)`, which is
-`x + (x << 3) = 9x`, cost 2. The solver finds the shift amount 3 the same way,
-from a free constant. Two cheap operations beat one expensive one, 2 against 3.
+For latency optimality, x * 9 requires two instructions: shl(x, 3) followed by
+add(x, r0), so x + (x << 3) = 9x, with cost 2. The solver finds the shift
+amount 3 as a free constant in the two-component shift-and-add library that the
+sweep reaches at weight 2. In this case, two cheap instructions outperform one
+costly multiplication.
 
-Both programs are verified twice over. The SMT proof shows each equals the spec
-on every 32-bit input, and the independent fuzzer agrees on 20,000 random cases.
-The flip is real and it's plain: minimum instruction count picks the multiply,
-minimum latency picks the shift-and-add.
+Both programs are verified twice: with the SMT proof that the program is equal
+to the specification for all 32-bit inputs, and with an independent fuzzer that
+checks for equivalence across 20,000 random cases. The difference is clear and
+obvious: minimal number of instructions prefers multiplication, while minimal
+latency prefers the shift-and-add combination.
 
-Here's the same comparison across every benchmark in the suite:
+A cross-benchmark perspective is provided below:
 
 | benchmark | length-optimal | latency-optimal | flip? |
 |---|---|---|---|
-| isolate_rmb | 2 instructions, cost 2 | same program | no |
-| absval | 3 instructions, cost 3 | same program | no |
+| isolate_rmb | 2 instructions, cost 2 | identical program | no |
+| absval | 3 instructions, cost 3 | identical program | no |
 | popcount | no result (frontier) | no cost claim | — |
 | x*9 | 1 instruction (mul), cost 3 | 2 instructions (shl, add), cost 2 | yes |
 
-## The old benchmarks don't flip
+## The old benchmarks do not flip
 
-Only multiply has a weight above 1, so for any MUL-free program the cost equals
-the length exactly. That makes the Phase 5B floors do double duty. A program of
-cost below `c` has fewer than `c` instructions, since every op weighs at least
-1, and that holds no matter what ops are used, so a length floor at `c` is
-always a cost floor at `c` too. What needs the multiply-free condition is the
-other side: it's what makes the known program's own cost equal its length, so
-that program meets the floor exactly instead of just sitting above it.
+As the only operation with weight greater than 1 is multiplication, any program
+that does not contain multiplication has cost equal to its length. The Phase 5B
+floors therefore serve as double-duty constraint: a program with cost less than
+c has fewer than c instructions regardless of its actual operations. The
+necessity of the multiply-free constraint is thus confined to the reverse
+direction: it is what makes the cost of the known program equal to its floor.
 
-isolate_rmb's optimum is `neg` then `and`, two weight-1 instructions, cost 2.
-`test_no_isolate_rmb_program_of_length_one_or_less` sweeps every one-op library
-at 32 bits with free constants and gets unsat, so nothing of length one or cost
-one exists, and 2 is the cost floor as well as the length floor. absval's optimum
-is the three-instruction `ashr(x, x)`, `x xor r0`, `r1 sub r0`, all weight-1,
-cost 3. `test_no_absval_program_of_length_two_or_less` sweeps every one-op and
-two-op library and gets unsat, so 3 is the floor both ways. Neither benchmark
-flips, because neither optimum spends a multiply. popcount has no converged
-result at all, so it gets no cost claim, the same honest blank it already carries
-in the length table.
+In isolate_rmb, the optimum is neg followed by and: two weight-1 instructions,
+and the cost is 2. The test test_no_isolate_rmb_program_of_length_one_or_less
+that searches all one-operation libraries at 32-bit precision with free
+constants finds no solution, so there is no one-operation or cost-1 program,
+and 2 is both the cost floor and the length floor. For absval, the optimum is
+the three-instruction sequence: ashr(x, x), x xor r0, r1 sub r0, all weight-1,
+with the cost of 3. The test test_no_absval_program_of_length_two_or_less that
+searches all one- and two-operation libraries similarly finds no solution, so 3
+is the floor in both metrics. Both benchmarks do not flip, as their optimum
+does not use multiplication. The popcount benchmark has no converged result and
+thus has no corresponding cost claim, maintaining the honesty of the length
+table.
 
 ## Honest framing
 
-Cost-aware superoptimization is old ground. Massalin's 1987 superoptimizer
-counted cycles, not instructions. STOKE (Schkufza, Sharma, Aiken, ASPLOS 2013)
-optimized measured runtime directly with a random walk. Strength reduction,
-turning a multiply into shifts and adds, is compiler folklore older than any of
-this. The sweep here is iterative deepening by weight, adapted to the Jha 2010
-component encoding the rest of the project already uses. Mine is the
-implementation, the soundness argument as written for this encoder, and the
-measurements, each one verified by the SMT proof and the fuzzer before it's
-reported.
+Cost-aware superoptimization is known technique. In his 1987 paper, Massalin
+superoptimized cycle counts, not instruction counts. STOKE (Schkufza, Sharma,
+Aiken, ASPLOS 2013) optimized measured runtime directly using a random walk
+approach. Strength reduction, that is, replacement of multiplications with
+shift-and-adds, is compiler lore, preceding this work. The current sweep uses
+iterative deepening by weight applied to the Jha 2010 component encoding used
+by the rest of the project. The current contribution includes the
+implementation, the formal soundness argument for this particular encoder, and
+the corresponding measurements, each verified by SMT proofs and fuzzers prior
+to reporting.
