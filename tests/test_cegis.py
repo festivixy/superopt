@@ -57,6 +57,21 @@ def test_decode_inlines_a_constant_slot():
     )
 
 
+def test_synthesizes_when_line_count_is_a_power_of_two():
+    spec = Program(
+        32,
+        (
+            Instruction(Op.SUB, (InputRef(0), Const(1))),
+            Instruction(Op.AND, (InputRef(0), ResultRef(0))),
+        ),
+        ResultRef(1),
+    )
+    library = Library(ops=(Op.SUB, Op.AND), n_constants=1)
+    result = synthesize(spec, library, seed=0)
+    assert result is not None
+    assert isinstance(equivalent(result, spec), Equivalent)
+
+
 def test_synthesizes_isolate_rmb_at_8_bit():
     spec = _isolate_rmb_spec(8)
     library = Library(ops=(Op.NEG, Op.AND))

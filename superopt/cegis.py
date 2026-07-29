@@ -161,7 +161,7 @@ def _finite_synthesis(
     fixed = library.fixed_constants
     n_consts = n_free + len(fixed)
     n_lines = n_inputs + n_consts + len(ops)
-    loc_width = max(1, (n_lines - 1).bit_length())
+    loc_width = max(1, n_lines.bit_length())
     lo = {k: BitVec(f"lo_{k}", loc_width) for k in range(len(ops))}
     li = {
         (k, j): BitVec(f"li_{k}_{j}", loc_width)
