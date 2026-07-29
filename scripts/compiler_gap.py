@@ -9,15 +9,41 @@ C_DIR = ROOT / "results" / "c"
 ASM_DIR = ROOT / "results" / "asm"
 DOC = ROOT / "results" / "compiler_gap.md"
 
-BENCHMARKS = ("absval", "isolate_rmb", "popcount")
+BENCHMARKS = (
+    "absval",
+    "avg_ceil",
+    "avg_floor",
+    "bswap32",
+    "clear_lowest_bit",
+    "flp2",
+    "isolate_lowest_zero",
+    "isolate_rmb",
+    "popcount",
+    "rotl5",
+    "sign",
+    "smear_lowest_bit",
+    "times_nine",
+    "turn_off_trailing_ones",
+)
 FLAG_SETS = (("base", "-march=x86-64"), ("v3", "-march=x86-64-v3"))
 BEGIN = "<!-- gap-table:begin -->"
 END = "<!-- gap-table:end -->"
 
 SUPEROPT = {
     "absval": "**3** (proven)",
+    "avg_ceil": "4 (best found)",
+    "avg_floor": "4 (best found)",
+    "bswap32": "9 (verified upper bound)",
+    "clear_lowest_bit": "**2** (proven)",
+    "flp2": "12 (verified upper bound)",
+    "isolate_lowest_zero": "3 (best found)",
     "isolate_rmb": "**2** (proven)",
     "popcount": "no result (frontier)",
+    "rotl5": "**3** (proven)",
+    "sign": "4 (best found)",
+    "smear_lowest_bit": "**2** (proven)",
+    "times_nine": "**1** (proven)",
+    "turn_off_trailing_ones": "**2** (proven)",
 }
 
 
