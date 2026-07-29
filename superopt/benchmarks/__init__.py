@@ -3,7 +3,9 @@ from __future__ import annotations
 from superopt.benchmarks.abs_val import absval
 from superopt.benchmarks.avg_ceil import avg_ceil
 from superopt.benchmarks.avg_floor import avg_floor
+from superopt.benchmarks.bswap32 import bswap32
 from superopt.benchmarks.clear_lowest_bit import clear_lowest_bit
+from superopt.benchmarks.flp2 import flp2
 from superopt.benchmarks.isolate_lowest_zero import isolate_lowest_zero
 from superopt.benchmarks.isolate_rmb import isolate_rmb
 from superopt.benchmarks.popcount import popcount
@@ -17,7 +19,9 @@ __all__ = [
     "absval",
     "avg_ceil",
     "avg_floor",
+    "bswap32",
     "clear_lowest_bit",
+    "flp2",
     "isolate_lowest_zero",
     "isolate_rmb",
     "popcount",

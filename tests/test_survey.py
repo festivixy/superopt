@@ -4,7 +4,9 @@ import pytest
 
 from superopt.benchmarks.avg_ceil import avg_ceil
 from superopt.benchmarks.avg_floor import avg_floor
+from superopt.benchmarks.bswap32 import bswap32
 from superopt.benchmarks.clear_lowest_bit import clear_lowest_bit
+from superopt.benchmarks.flp2 import flp2
 from superopt.benchmarks.isolate_lowest_zero import isolate_lowest_zero
 from superopt.benchmarks.rotl5 import rotl5
 from superopt.benchmarks.sign import sign
@@ -14,7 +16,7 @@ from superopt.cegis import Library, synthesize
 from superopt.equiv import Equivalent, equivalent
 from superopt.fuzz import fuzz
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef
+from superopt.ir import Const, InputRef, Instruction, Op, Operand, Program, ResultRef
 from tests.support import assert_floor
 
 
@@ -283,5 +285,100 @@ def test_avg_ceil_synthesizes():
     assert len(result.instructions) == 4
     assert isinstance(equivalent(result, spec), Equivalent)
     assert fuzz(result, avg_ceil, trials=20_000, seed=1) is None
+
+
+def _flp2_spec(width: int) -> Program:
+    instructions: list[Instruction] = []
+    current: Operand = InputRef(0)
+    shift = 1
+    index = 0
+    while shift < width:
+        instructions.append(Instruction(Op.LSHR, (current, Const(shift))))
+        instructions.append(Instruction(Op.OR, (current, ResultRef(index))))
+        current = ResultRef(index + 1)
+        index += 2
+        shift *= 2
+    instructions.append(Instruction(Op.LSHR, (current, Const(1))))
+    instructions.append(Instruction(Op.SUB, (current, ResultRef(index))))
+    return Program(width, tuple(instructions), ResultRef(index + 1))
+
+
+def test_flp2_upper_bound_verified():
+    for width in (8, 16):
+        spec = _flp2_spec(width)
+        for x in range(1 << width):
+            assert execute(spec, (x,)) == flp2(x, width)
+    spec32 = _flp2_spec(32)
+    assert len(spec32.instructions) == 12
+    assert fuzz(spec32, flp2, trials=20_000, seed=1) is None
+
+
+def _bswap_spec(width: int) -> Program:
+    if width == 16:
+        return Program(
+            16,
+            (
+                Instruction(Op.SHL, (InputRef(0), Const(8))),
+                Instruction(Op.LSHR, (InputRef(0), Const(8))),
+                Instruction(Op.OR, (ResultRef(0), ResultRef(1))),
+            ),
+            ResultRef(2),
+        )
+    return Program(
+        32,
+        (
+            Instruction(Op.SHL, (InputRef(0), Const(24))),
+            Instruction(Op.AND, (InputRef(0), Const(0xFF00))),
+            Instruction(Op.SHL, (ResultRef(1), Const(8))),
+            Instruction(Op.LSHR, (InputRef(0), Const(8))),
+            Instruction(Op.AND, (ResultRef(3), Const(0xFF00))),
+            Instruction(Op.LSHR, (InputRef(0), Const(24))),
+            Instruction(Op.OR, (ResultRef(0), ResultRef(2))),
+            Instruction(Op.OR, (ResultRef(6), ResultRef(4))),
+            Instruction(Op.OR, (ResultRef(7), ResultRef(5))),
+        ),
+        ResultRef(8),
+    )
+
+
+def test_bswap32_upper_bound_verified():
+    spec16 = _bswap_spec(16)
+    for x in range(1 << 16):
+        assert execute(spec16, (x,)) == bswap32(x, 16)
+    spec32 = _bswap_spec(32)
+    assert len(spec32.instructions) == 9
+    assert fuzz(spec32, bswap32, trials=20_000, seed=1) is None
+
+
+def _folklore_min_trick(width: int) -> Program:
+    return Program(
+        width,
+        (
+            Instruction(Op.SUB, (InputRef(0), InputRef(1))),
+            Instruction(Op.ASHR, (ResultRef(0), Const(width - 1))),
+            Instruction(Op.AND, (ResultRef(0), ResultRef(1))),
+            Instruction(Op.ADD, (InputRef(1), ResultRef(2))),
+        ),
+        ResultRef(3),
+    )
+
+
+def _signed_min(x: int, y: int, width: int) -> int:
+    mask = (1 << width) - 1
+    half = 1 << (width - 1)
+    sx = (x & mask) - (1 << width) if (x & mask) & half else x & mask
+    sy = (y & mask) - (1 << width) if (y & mask) & half else y & mask
+    return min(sx, sy) & mask
+
+
+def test_folklore_min_trick_is_wrong():
+    trick = _folklore_min_trick(32)
+    divergence = fuzz(trick, _signed_min, trials=100_000, seed=1)
+    assert divergence is not None
+    x, y = divergence.inputs
+    assert execute(trick, (x, y)) != _signed_min(x, y, 32)
+    int_min = 1 << 31
+    assert execute(trick, (int_min, 1)) == 1
+    assert _signed_min(int_min, 1, 32) == int_min
 
 
