@@ -93,7 +93,7 @@ def _table() -> str:
     ASM_DIR.mkdir(parents=True, exist_ok=True)
     rows = [
         "| benchmark | gcc -O3 base | gcc -O3 v3 | clang -O3 base "
-        "| clang -O3 v3 | superopt (proven minimum) |",
+        "| clang -O3 v3 | superopt |",
         "|---|---|---|---|---|---|",
     ]
     for bench in BENCHMARKS:
