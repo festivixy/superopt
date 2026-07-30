@@ -454,7 +454,9 @@ compiler columns keep counting instructions, and the cost document presents the
 opposite comparison. The times_nine row is the point of divergence between the
 two.
 
-Finally, nothing in this document has been reported upstream yet. A gap in the
+The first of these is now filed: the bit-scan loops are llvm/llvm-project
+issue #212908 (<https://github.com/llvm/llvm-project/issues/212908>). The GCC
+twin is pending an account. A gap in the
 table does not mean a compiler bug in itself. Reporting the row requires more
 than a numeric value: replication of the result on the current trunk versions
 of gcc and clang, portability check to make sure the shorter sequence remains
