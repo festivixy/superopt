@@ -55,15 +55,18 @@ def _apply(
             return -args[0] & mask
         case Op.SHL:
             if shift_mode is ShiftMode.MASK:
+                assert width & (width - 1) == 0
                 return (args[0] << (args[1] & (width - 1))) & mask
             return (args[0] << args[1]) & mask if args[1] < width else 0
         case Op.LSHR:
             if shift_mode is ShiftMode.MASK:
+                assert width & (width - 1) == 0
                 return args[0] >> (args[1] & (width - 1))
             return args[0] >> args[1] if args[1] < width else 0
         case Op.ASHR:
             signed = args[0] - (1 << width) if args[0] & (1 << (width - 1)) else args[0]
             if shift_mode is ShiftMode.MASK:
+                assert width & (width - 1) == 0
                 return (signed >> (args[1] & (width - 1))) & mask
             if args[1] >= width:
                 return mask if signed < 0 else 0

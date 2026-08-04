@@ -42,6 +42,14 @@ SHIFT_EDGE_CASES = [
     (Op.SHL, 0xFF, 4, 0xF0),
 ]
 
+MASK_EDGE_CASES = [
+    (Op.ASHR, 0x80, 9, 0xC0),
+    (Op.ASHR, 0x80, 33, 0xC0),
+    (Op.SHL, 0x01, 15, 0x80),
+    (Op.LSHR, 0xFF, 9, 0x7F),
+    (Op.SHL, 0xFF, 8, 0xFF),
+]
+
 
 def _random_operand(rng: random.Random, result_count: int) -> Operand:
     choices = ["input", "const"]
@@ -119,3 +127,16 @@ def test_encoder_matches_interpreter_on_shift_edge_cases(
     )
     assert execute(program, (x,)) == expected
     assert _evaluate(program, (x,)) == expected
+
+
+@pytest.mark.parametrize(("op", "x", "shift", "expected"), MASK_EDGE_CASES)
+def test_encoder_matches_interpreter_on_mask_edge_cases(
+    op: Op, x: int, shift: int, expected: int
+) -> None:
+    program = Program(
+        WIDTH,
+        (Instruction(op, (InputRef(0), Const(shift))),),
+        ResultRef(0),
+    )
+    assert execute(program, (x,), shift_mode=ShiftMode.MASK) == expected
+    assert _evaluate(program, (x,), shift_mode=ShiftMode.MASK) == expected

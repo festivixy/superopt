@@ -49,19 +49,22 @@ def apply(
             return -args[0]
         case Op.SHL:
             if shift_mode is ShiftMode.MASK:
-                width = args[1].size()
+                width = args[0].size()
+                assert width & (width - 1) == 0
                 masked = args[1] & BitVecVal(width - 1, width)
                 return args[0] << masked
             return args[0] << args[1]
         case Op.LSHR:
             if shift_mode is ShiftMode.MASK:
-                width = args[1].size()
+                width = args[0].size()
+                assert width & (width - 1) == 0
                 masked = args[1] & BitVecVal(width - 1, width)
                 return LShR(args[0], masked)
             return LShR(args[0], args[1])
         case Op.ASHR:
             if shift_mode is ShiftMode.MASK:
-                width = args[1].size()
+                width = args[0].size()
+                assert width & (width - 1) == 0
                 masked = args[1] & BitVecVal(width - 1, width)
                 return args[0] >> masked
             return args[0] >> args[1]
