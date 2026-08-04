@@ -131,7 +131,7 @@ The study notes (superoptimization theory, SMT and bit-vectors,
 equivalence-via-unsat, CEGIS, the Jha 2010 reading) live in a separate
 repository, so the Obsidian auto-sync churn never clutters this one's history:
 
-**→ [github.com/smiles0527/superopt-notes](https://github.com/smiles0527/superopt-notes)**
+**→ [github.com/festivixy/superopt-notes](https://github.com/festivixy/superopt-notes)**
 
 They're also checked out locally at `notes/` (gitignored here) as an Obsidian
 vault. Edit them there; the `obsidian-git` plugin syncs them to the notes repo

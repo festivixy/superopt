@@ -213,7 +213,7 @@ The measurements are performed on one machine. gcc is MinGW-W64 13.2.0 and runs 
 The suite is the artifact. A fresh checkout on Python 3.11 or newer reproduces all the above numbers:
 
 ```bash
-git clone https://github.com/smiles0527/superopt.git
+git clone https://github.com/festivixy/superopt.git
 cd superopt
 python -m venv venv
 venv\Scripts\activate        # Windows
