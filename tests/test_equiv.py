@@ -4,7 +4,16 @@ import pytest
 
 from superopt.equiv import Counterexample, Equivalent, equivalent
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Operand, Program, ResultRef
+from superopt.ir import (
+    Const,
+    InputRef,
+    Instruction,
+    Op,
+    Operand,
+    Program,
+    ResultRef,
+    ShiftMode,
+)
 
 
 def _single_op_program(width: int, op: Op, operands: tuple[Operand, ...]) -> Program:
@@ -62,6 +71,13 @@ def test_two_input_counterexample_has_full_arity() -> None:
     assert isinstance(result, Counterexample)
     assert len(result.inputs) == 2
     assert execute(and_prog, result.inputs) != execute(or_prog, result.inputs)
+
+
+def test_shift_by_width_is_identity_only_under_mask() -> None:
+    shl8 = _single_op_program(8, Op.SHL, (InputRef(0), Const(8)))
+    ident = Program(8, (), InputRef(0))
+    assert isinstance(equivalent(shl8, ident, shift_mode=ShiftMode.MASK), Equivalent)
+    assert isinstance(equivalent(shl8, ident), Counterexample)
 
 
 def test_constant_only_programs_compare_without_inputs() -> None:

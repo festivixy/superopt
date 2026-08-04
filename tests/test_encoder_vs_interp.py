@@ -8,7 +8,16 @@ from z3 import BitVecVal, simplify, substitute
 
 from superopt.encode import encode
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Operand, Program, ResultRef
+from superopt.ir import (
+    Const,
+    InputRef,
+    Instruction,
+    Op,
+    Operand,
+    Program,
+    ResultRef,
+    ShiftMode,
+)
 
 WIDTH = 8
 ARITY = 2
@@ -58,8 +67,13 @@ def _random_program(rng: random.Random) -> Program:
     return Program(WIDTH, tuple(instructions), output)
 
 
-def _evaluate(program: Program, inputs: Sequence[int]) -> int:
-    input_vars, output_expr = encode(program)
+def _evaluate(
+    program: Program,
+    inputs: Sequence[int],
+    *,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
+) -> int:
+    input_vars, output_expr = encode(program, shift_mode=shift_mode)
     bindings = [
         (var, BitVecVal(val, WIDTH))
         for var, val in zip(input_vars, inputs, strict=False)
@@ -67,7 +81,8 @@ def _evaluate(program: Program, inputs: Sequence[int]) -> int:
     return simplify(substitute(output_expr, *bindings)).as_long()
 
 
-def test_encoder_matches_interpreter() -> None:
+@pytest.mark.parametrize("shift_mode", list(ShiftMode))
+def test_encoder_matches_interpreter(shift_mode: ShiftMode) -> None:
     program_rng = random.Random(0xC0FFEE)
     input_rng = random.Random(0x1234)
     checks = 0
@@ -83,8 +98,8 @@ def test_encoder_matches_interpreter() -> None:
         for inputs in input_pairs:
             if inputs[0] & SIGN_BIT or inputs[1] & SIGN_BIT:
                 saw_sign_bit_input = True
-            expected = execute(program, inputs)
-            actual = _evaluate(program, inputs)
+            expected = execute(program, inputs, shift_mode=shift_mode)
+            actual = _evaluate(program, inputs, shift_mode=shift_mode)
             assert actual == expected, (program, inputs, expected, actual)
             checks += 1
     assert checks == NUM_PROGRAMS * NUM_INPUTS

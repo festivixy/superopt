@@ -4,7 +4,16 @@ from typing import assert_never
 
 from z3 import BitVec, BitVecRef, BitVecVal, LShR
 
-from superopt.ir import Const, Hole, InputRef, Op, Operand, Program, ResultRef
+from superopt.ir import (
+    Const,
+    Hole,
+    InputRef,
+    Op,
+    Operand,
+    Program,
+    ResultRef,
+    ShiftMode,
+)
 
 
 def _input_arity(program: Program) -> int:
@@ -18,7 +27,9 @@ def _input_arity(program: Program) -> int:
     return arity
 
 
-def apply(op: Op, args: list[BitVecRef]) -> BitVecRef:
+def apply(
+    op: Op, args: list[BitVecRef], *, shift_mode: ShiftMode = ShiftMode.SATURATE
+) -> BitVecRef:
     match op:
         case Op.ADD:
             return args[0] + args[1]
@@ -37,10 +48,22 @@ def apply(op: Op, args: list[BitVecRef]) -> BitVecRef:
         case Op.NEG:
             return -args[0]
         case Op.SHL:
+            if shift_mode is ShiftMode.MASK:
+                width = args[1].size()
+                masked = args[1] & BitVecVal(width - 1, width)
+                return args[0] << masked
             return args[0] << args[1]
         case Op.LSHR:
+            if shift_mode is ShiftMode.MASK:
+                width = args[1].size()
+                masked = args[1] & BitVecVal(width - 1, width)
+                return LShR(args[0], masked)
             return LShR(args[0], args[1])
         case Op.ASHR:
+            if shift_mode is ShiftMode.MASK:
+                width = args[1].size()
+                masked = args[1] & BitVecVal(width - 1, width)
+                return args[0] >> masked
             return args[0] >> args[1]
     assert_never(op)
 
@@ -57,7 +80,7 @@ def _hole_ids(program: Program) -> list[int]:
 
 
 def encode_sketch(
-    program: Program,
+    program: Program, *, shift_mode: ShiftMode = ShiftMode.SATURATE
 ) -> tuple[list[BitVecRef], dict[int, BitVecRef], BitVecRef]:
     width = program.width
     input_vars = [BitVec(f"in{i}", width) for i in range(_input_arity(program))]
@@ -78,11 +101,13 @@ def encode_sketch(
 
     for instruction in program.instructions:
         args = [value(operand) for operand in instruction.operands]
-        results.append(apply(instruction.op, args))
+        results.append(apply(instruction.op, args, shift_mode=shift_mode))
 
     return input_vars, hole_vars, value(program.output)
 
 
-def encode(program: Program) -> tuple[list[BitVecRef], BitVecRef]:
-    input_vars, _, output = encode_sketch(program)
+def encode(
+    program: Program, *, shift_mode: ShiftMode = ShiftMode.SATURATE
+) -> tuple[list[BitVecRef], BitVecRef]:
+    input_vars, _, output = encode_sketch(program, shift_mode=shift_mode)
     return input_vars, output

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from z3 import Solver, sat, unsat
 
 from superopt.encode import encode
-from superopt.ir import Program
+from superopt.ir import Program, ShiftMode
 
 
 @dataclass(frozen=True)
@@ -21,12 +21,14 @@ class Counterexample:
 Result = Equivalent | Counterexample
 
 
-def equivalent(a: Program, b: Program) -> Result:
+def equivalent(
+    a: Program, b: Program, *, shift_mode: ShiftMode = ShiftMode.SATURATE
+) -> Result:
     if a.width != b.width:
         raise ValueError(f"width mismatch: {a.width} != {b.width}")
 
-    vars_a, out_a = encode(a)
-    vars_b, out_b = encode(b)
+    vars_a, out_a = encode(a, shift_mode=shift_mode)
+    vars_b, out_b = encode(b, shift_mode=shift_mode)
     shared_vars = vars_a if len(vars_a) >= len(vars_b) else vars_b
 
     solver = Solver()
