@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from superopt.interp import execute
-from superopt.ir import Program
+from superopt.ir import Program, ShiftMode
 
 
 @dataclass(frozen=True)
@@ -31,13 +31,14 @@ def fuzz(
     *,
     trials: int = 100_000,
     seed: int = 0,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> Divergence | None:
     arity = _infer_arity(spec)
     bound = 1 << program.width
     rng = random.Random(seed)
     for _ in range(trials):
         inputs = tuple(rng.randrange(bound) for _ in range(arity))
-        program_output = execute(program, inputs)
+        program_output = execute(program, inputs, shift_mode=shift_mode)
         spec_output = spec(*inputs, program.width)
         if program_output != spec_output:
             return Divergence(inputs, program_output, spec_output)

@@ -9,7 +9,7 @@ from superopt.cegis import Library, _Assignment, _decode, synthesize
 from superopt.equiv import Equivalent, equivalent
 from superopt.fuzz import fuzz
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef
+from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef, ShiftMode
 from tests.support import assert_floor
 
 
@@ -143,6 +143,24 @@ def test_synthesizes_shift_then_mask():
         return (x >> 1) & 0x55
 
     assert fuzz(result, shifted_mask, trials=20_000, seed=1) is None
+
+
+def test_synthesizes_shift_then_mask_under_mask_mode():
+    spec = _shift_mask_spec(8, 1, 0x55)
+    library = Library(ops=(Op.LSHR, Op.AND), n_constants=2)
+    result = synthesize(spec, library, seed=0, shift_mode=ShiftMode.MASK)
+    assert result is not None
+    assert isinstance(
+        equivalent(result, spec, shift_mode=ShiftMode.MASK), Equivalent
+    )
+
+    def shifted_mask(x: int, width: int) -> int:
+        return (x >> 1) & 0x55
+
+    assert (
+        fuzz(result, shifted_mask, trials=20_000, seed=1, shift_mode=ShiftMode.MASK)
+        is None
+    )
 
 
 def _absval_spec(width: int) -> Program:

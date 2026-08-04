@@ -3,7 +3,7 @@ from __future__ import annotations
 from superopt.benchmarks import isolate_rmb
 from superopt.fuzz import Divergence, fuzz
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef
+from superopt.ir import Const, InputRef, Instruction, Op, Program, ResultRef, ShiftMode
 
 WIDTH = 8
 
@@ -53,6 +53,24 @@ def test_different_seeds_share_no_state() -> None:
     program = _isolate_rmb_program()
     assert fuzz(program, isolate_rmb, trials=10_000, seed=1) is None
     assert fuzz(program, isolate_rmb, trials=10_000, seed=2) is None
+
+
+def test_shift_semantics_diverge_between_modes() -> None:
+    program = Program(
+        width=WIDTH,
+        instructions=(Instruction(Op.SHL, (InputRef(0), Const(8))),),
+        output=ResultRef(0),
+    )
+
+    def identity_masked(x: int, width: int) -> int:
+        return x & 0xFF
+
+    assert (
+        fuzz(program, identity_masked, trials=20_000, seed=1, shift_mode=ShiftMode.MASK)
+        is None
+    )
+    result = fuzz(program, identity_masked, trials=20_000, seed=1)
+    assert isinstance(result, Divergence)
 
 
 def test_arity_follows_spec_not_program() -> None:

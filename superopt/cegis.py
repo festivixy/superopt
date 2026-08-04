@@ -29,6 +29,7 @@ from superopt.ir import (
     Op,
     Program,
     ResultRef,
+    ShiftMode,
 )
 
 COMMUTATIVE: frozenset[Op] = frozenset(
@@ -120,6 +121,7 @@ def _example(
     n_lines: int,
     width: int,
     e: int,
+    shift_mode: ShiftMode,
 ) -> BoolRef:
     out = {k: BitVec(f"o_{e}_{k}", width) for k in range(len(ops))}
     iv = {
@@ -130,7 +132,7 @@ def _example(
     clauses = []
     for k, op in enumerate(ops):
         args = [iv[(k, j)] for j in range(ARITY[op])]
-        clauses.append(out[k] == apply(op, args))
+        clauses.append(out[k] == apply(op, args, shift_mode=shift_mode))
     for (k, j), port in iv.items():
         for m in range(len(ops)):
             clauses.append(Implies(li[(k, j)] == lo[m], port == out[m]))
@@ -155,6 +157,8 @@ def _finite_synthesis(
     examples: list[tuple[int, ...]],
     n_inputs: int,
     width: int,
+    *,
+    shift_mode: ShiftMode,
 ) -> _Assignment | None:
     ops = library.ops
     n_free = library.n_constants
@@ -175,11 +179,11 @@ def _finite_synthesis(
     solver = Solver()
     solver.add(_wellformed(ops, lo, li, n_inputs, n_consts, n_lines))
     for e, inp in enumerate(examples):
-        expected = execute(spec, inp)
+        expected = execute(spec, inp, shift_mode=shift_mode)
         solver.add(
             _example(
                 ops, lo, li, consts, inp, expected,
-                n_inputs, n_consts, n_lines, width, e,
+                n_inputs, n_consts, n_lines, width, e, shift_mode,
             )
         )
     if solver.check() != sat:
@@ -204,6 +208,7 @@ def synthesize(
     *,
     seed: int = 0,
     max_iters: int = 64,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> Program | None:
     width = spec.width
     n_inputs = len(encode_sketch(spec)[0])
@@ -213,11 +218,13 @@ def synthesize(
         tuple(rng.randrange(bound) for _ in range(n_inputs))
     ]
     for _ in range(max_iters):
-        assignment = _finite_synthesis(spec, library, examples, n_inputs, width)
+        assignment = _finite_synthesis(
+            spec, library, examples, n_inputs, width, shift_mode=shift_mode
+        )
         if assignment is None:
             return None
         program = _decode(assignment, library, n_inputs, width)
-        result = equivalent(program, spec)
+        result = equivalent(program, spec, shift_mode=shift_mode)
         if isinstance(result, Equivalent):
             return program
         examples.append(result.inputs)

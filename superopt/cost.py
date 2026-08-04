@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import combinations_with_replacement
 
 from superopt.cegis import Library, synthesize
-from superopt.ir import Op, Program
+from superopt.ir import Op, Program, ShiftMode
 
 WEIGHTS: dict[Op, int] = {
     Op.ADD: 1,
@@ -35,11 +35,15 @@ def _libraries_by_cost(max_cost: int) -> list[tuple[Op, ...]]:
 
 
 def synthesize_min_cost(
-    spec: Program, *, max_cost: int, seed: int = 0
+    spec: Program,
+    *,
+    max_cost: int,
+    seed: int = 0,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> Program | None:
     for ops in _libraries_by_cost(max_cost):
         library = Library(ops=ops, n_constants=2 * len(ops))
-        result = synthesize(spec, library, seed=seed)
+        result = synthesize(spec, library, seed=seed, shift_mode=shift_mode)
         if result is not None:
             return result
     return None

@@ -7,7 +7,7 @@ from z3 import BitVecVal, Solver, sat, substitute
 from superopt.encode import encode_sketch
 from superopt.equiv import Equivalent, equivalent
 from superopt.interp import execute
-from superopt.ir import Const, Hole, Instruction, Operand, Program
+from superopt.ir import Const, Hole, Instruction, Operand, Program, ShiftMode
 
 
 def _fill(sketch: Program, holes: dict[int, int]) -> Program:
@@ -24,9 +24,13 @@ def _fill(sketch: Program, holes: dict[int, int]) -> Program:
 
 
 def _finite_synthesis(
-    sketch: Program, spec: Program, examples: list[tuple[int, ...]]
+    sketch: Program,
+    spec: Program,
+    examples: list[tuple[int, ...]],
+    *,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> dict[int, int] | None:
-    input_vars, hole_vars, out = encode_sketch(sketch)
+    input_vars, hole_vars, out = encode_sketch(sketch, shift_mode=shift_mode)
     width = sketch.width
     solver = Solver()
     for example in examples:
@@ -35,7 +39,8 @@ def _finite_synthesis(
             for var, value in zip(input_vars, example, strict=True)
         ]
         bound_out = substitute(out, *bindings) if bindings else out
-        solver.add(bound_out == BitVecVal(execute(spec, example), width))
+        expected = execute(spec, example, shift_mode=shift_mode)
+        solver.add(bound_out == BitVecVal(expected, width))
     if solver.check() != sat:
         return None
     model = solver.model()
@@ -51,6 +56,7 @@ def synthesize_constants(
     *,
     seed: int = 0,
     max_iters: int = 64,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> Program | None:
     if sketch.width != spec.width:
         raise ValueError(f"width mismatch: {sketch.width} != {spec.width}")
@@ -65,11 +71,11 @@ def synthesize_constants(
         tuple(rng.randrange(bound) for _ in range(arity))
     ]
     for _ in range(max_iters):
-        holes = _finite_synthesis(sketch, spec, examples)
+        holes = _finite_synthesis(sketch, spec, examples, shift_mode=shift_mode)
         if holes is None:
             return None
         filled = _fill(sketch, holes)
-        result = equivalent(filled, spec)
+        result = equivalent(filled, spec, shift_mode=shift_mode)
         if isinstance(result, Equivalent):
             return filled
         examples.append(result.inputs)
