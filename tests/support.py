@@ -5,7 +5,7 @@ from itertools import combinations_with_replacement
 from superopt.cegis import Library, synthesize
 from superopt.equiv import Counterexample, equivalent
 from superopt.interp import execute
-from superopt.ir import InputRef, Op, Program
+from superopt.ir import InputRef, Op, Program, ShiftMode
 
 
 def libraries_up_to(max_ops: int) -> list[Library]:
@@ -21,11 +21,17 @@ def assert_floor(
     max_ops: int,
     n_inputs: int,
     probes: tuple[tuple[int, ...], tuple[int, ...]],
+    *,
+    shift_mode: ShiftMode = ShiftMode.SATURATE,
 ) -> None:
     first, second = probes
     assert execute(spec, first) != execute(spec, second)
     for index in range(n_inputs):
         passthrough = Program(spec.width, (), InputRef(index))
-        assert isinstance(equivalent(passthrough, spec), Counterexample)
+        assert isinstance(
+            equivalent(passthrough, spec, shift_mode=shift_mode), Counterexample
+        )
     for library in libraries_up_to(max_ops):
-        assert synthesize(spec, library, seed=0) is None, library.ops
+        assert (
+            synthesize(spec, library, seed=0, shift_mode=shift_mode) is None
+        ), library.ops
