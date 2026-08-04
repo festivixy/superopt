@@ -4,7 +4,16 @@ import pytest
 
 from superopt.benchmarks import absval, isolate_rmb, popcount
 from superopt.interp import execute
-from superopt.ir import Const, InputRef, Instruction, Op, Operand, Program, ResultRef
+from superopt.ir import (
+    Const,
+    InputRef,
+    Instruction,
+    Op,
+    Operand,
+    Program,
+    ResultRef,
+    ShiftMode,
+)
 
 
 def _single_op_program(width: int, op: Op, operands: tuple[Operand, ...]) -> Program:
@@ -141,3 +150,17 @@ def test_spec_functions_return_known_values():
     assert absval(0xFF, 8) == 1
     assert isolate_rmb(0b1100, 8) == 0b0100
     assert isolate_rmb(0, 8) == 0
+
+
+def test_mask_mode_shifts_wrap_the_amount():
+    shl = _single_op_program(8, Op.SHL, (InputRef(0), Const(8)))
+    lshr = _single_op_program(8, Op.LSHR, (InputRef(0), Const(9)))
+    ashr = _single_op_program(8, Op.ASHR, (InputRef(0), Const(8)))
+    assert execute(shl, (0xFF,), shift_mode=ShiftMode.MASK) == 0xFF
+    assert execute(lshr, (0xFF,), shift_mode=ShiftMode.MASK) == 0x7F
+    assert execute(ashr, (0x80,), shift_mode=ShiftMode.MASK) == 0x80
+
+
+def test_saturate_stays_default():
+    shl = _single_op_program(8, Op.SHL, (InputRef(0), Const(8)))
+    assert execute(shl, (0xFF,)) == 0

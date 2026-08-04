@@ -18,6 +18,11 @@ class Op(StrEnum):
     ASHR = "ashr"
 
 
+class ShiftMode(StrEnum):
+    SATURATE = "saturate"
+    MASK = "mask"
+
+
 ARITY: dict[Op, int] = {
     Op.ADD: 2,
     Op.SUB: 2,
