@@ -2,6 +2,12 @@
 
 Why each non-obvious choice was made. Newest entry first.
 
+## The shift-semantics study
+
+- **The default remains SATURATE, as it is aligned with the Z3 semantics for the purpose of the byte-by-byte consistency of the default code path of the encoder.** MASK is the opt-in parameter per run.
+- **Mask enforces the power of two widths, since amount & (width − 1) equals amount mod width only in such cases.** All benchmarks use the widths which are power of two, and allowing other widths without testing is dangerous.
+- **Comprehensive cross-checking is retained as the sole safeguard.** An incorrectly encoded MASK shift would silently poison the impossibility claims made in this paper.
+
 ## Phase 5B, Stage A: the gap survey
 
 - **Superopt's column is graded because one column was stating four different things.** With three benchmarks, every row was either proven or had its popcount field empty, giving one honest label. With fourteen rows this was not the case anymore. The grading is made from: proven (synthesis plus a completed component-library floor sweep at 32-bit with free constants), best found (synthesis plus both verification layers, no completed floor), verified upper bound (a hand-built IR program analyzed exhaustively at small widths and fuzzed at 32, with no minimality claim), and no result. Seven rows are proven, four are best found, two are verified upper bound, and one is no result. The label is recorded as data in the SUPEROPT dictionary in scripts/compiler_gap.py file, ensuring that regeneration agrees with the table, not diverges into a narrative.
